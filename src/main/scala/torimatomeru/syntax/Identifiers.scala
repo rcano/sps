@@ -6,7 +6,7 @@ import org.parboiled2._
 trait Identifiers { self: ScalaSyntax =>
 
   def Operator = rule(oneOrMore(OperatorChar))
-
+  
   def VarId = rule { Lower ~ IdRest }
   def PlainId = rule { Upper ~ IdRest | VarId | Operator }
   def Id = rule { PlainId | ("`" ~ oneOrMore(ANY) ~ "`") }
