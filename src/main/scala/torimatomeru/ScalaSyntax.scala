@@ -37,8 +37,9 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
   def QualId = rule { oneOrMore(Id) separatedBy '.' }
   def Ids = rule { oneOrMore(Id) separatedBy ',' }
 
-  def Path: Rule0 = rule { optional(Id ~ '.') ~ "this" | StableId }
-  def StableId: Rule0 = rule { optional(Id ~ '.') ~ "super" ~ optional(ClassQualifier) ~ '.' ~ Id | Id | Path ~ '.' ~ Id }
+  //path and stableId were refactored (wrt spec) to avoid recursiveness and be more specific 
+  def Path: Rule0 = rule { zeroOrMore(Id ~ '.') ~ "this" ~ zeroOrMore(Id).separatedBy('.') | StableId }
+  def StableId: Rule0 = rule { zeroOrMore(Id ~ '.') ~ optional(("this" | "super" ~ optional(ClassQualifier)) ~ oneOrMore(Id).separatedBy('.')) }
   def ClassQualifier = rule { '[' ~ Id ~ ']' }
 
   ///////////////////////////////////////////
