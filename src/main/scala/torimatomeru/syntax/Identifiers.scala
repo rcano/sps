@@ -7,14 +7,11 @@ trait Identifiers { self: ScalaSyntax =>
 
   def Operator = rule(oneOrMore(OperatorChar))
   
-  def VarId = rule { Lower ~ IdRest }
-  def PlainId = rule { Upper ~ IdRest | VarId | Operator }
+  def VarId = rule { !Keywords ~ Lower ~ IdRest }
+  def PlainId = rule { !Keywords ~ Upper ~ IdRest | VarId | Operator }
   def Id = rule { PlainId | ("`" ~ oneOrMore(ANY) ~ "`") }
   def IdRest = rule { zeroOrMore(Letter | Digit) ~ optional("_" ~ Operator) }
 
-  /**
-   * Not being used right now.
-   */
   def Keywords = rule {
     "abstract" | "case" | "catch" | "class" | "def" | "do" | "else" | "extends" | "false" | "final" | "finally" | "for" | "forSome" | "if" |
     "implicit" | "import" | "lazy" | "match" | "new" | "null" | "object" | "override" | "package" | "private" | "protected" | "return" |
