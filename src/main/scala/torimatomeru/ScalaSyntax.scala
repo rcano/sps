@@ -100,7 +100,7 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
       '(' ~ optional(Exprs) ~ ')' |
       SimpleExpr ~ '.' ~ Id |
       SimpleExpr ~ TypeArgs |
-      SimpleExpr1 ~ ArgumentExprs /*|
+      SimpleExpr1 ~ ArgumentExprs /*| //this line doesn't make sense, if none of the previous options work, there is no way that a recursion on SimpleExpr1 will work
     XmlExpr*/
   }
   def Exprs: Rule0 = rule { oneOrMore(Expr) separatedBy ',' }
@@ -173,7 +173,9 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
   def SelfType: Rule0 = rule { "this" ~ ':' ~ Type ~ "=>" | Id ~ optional(':' ~ Type) ~ "=>" }
 
   def Import: Rule0 = rule { "import" ~ oneOrMore(ImportExpr).separatedBy(',') }
-  def ImportExpr: Rule0 = rule { StableId ~ '.' ~ (Id | '_' | ImportSelectors) }
+  
+  //ImportExpr is slightly changed wrt spec because StableId always consumes all the Ids possible, so there is no need to one at the end
+  def ImportExpr: Rule0 = rule { StableId ~ optional('_' | ImportSelectors) }
   def ImportSelectors: Rule0 = rule { '{' ~ zeroOrMore(ImportSelector ~ ',') ~ (ImportSelector | '_') ~ '}' }
   def ImportSelector: Rule0 = rule { Id ~ optional("=>" ~ (Id | '_')) }
 
