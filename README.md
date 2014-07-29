@@ -10,4 +10,10 @@ so in order you use it, you would fork it and add your own ast to the already de
 Current State
 -------------
 
-I just finished defning all the rules from the spec but in an almost automatic way, it probably wont work since the rules in the spec don't mind LL parsers at all (the literals do work though).
+I just finished defining all the rules from the spec but in an almost automatic way, but they wont work since the rules in the spec don't mind LL parsers at all.
+Right now imports, literals, and simple declaration (with blocks) works (at least what was tested, see tests).
+What was not tested:
+ * lambdas
+ * function (declaration and usage)
+ * Template defintions (classes, traits, objects)
+ * Everything else I haven't specificly noted before.
