@@ -6,8 +6,8 @@ import org.parboiled2._
 
 class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identifiers with Literals {
 
-  def Whitespace = rule { zeroOrMore(WhitespaceChar) | Comment }
-  
+  def Whitespace = rule { zeroOrMore(WhitespaceChar | Comment) }
+
   /**
    * Every token handles space at the end.
    * Don't let it propagate to mixins
@@ -19,27 +19,40 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
     ch(s) ~ Whitespace
   }
 
+  def pos = cursor -> cursorChar
+  
+  /**
+   * helper printing function
+   */
+  def pr(s: String) = rule { run(print(s)) }
+
   //////////////////////////////////////////////////
   // Override rules from dependencies
   // in order to handle white spaces
   // Note: when you add your AST, make sure to
   // only capture super.rule and not the whitespace
   //////////////////////////////////////////////////
-  
+
   override def Id = rule { super.Id ~ Whitespace }
   override def VarId = rule { super.VarId ~ Whitespace }
   override def Literal = rule { super.Literal ~ Whitespace }
-  
+  override def Semi = rule { super.Semi ~ Whitespace }
+  override def Newline = rule { super.Newline ~ Whitespace }
+
   ///////////////////////////////////////////
   // Qualifiers and Ids
   ///////////////////////////////////////////
-  
+
   def QualId = rule { oneOrMore(Id) separatedBy '.' }
   def Ids = rule { oneOrMore(Id) separatedBy ',' }
 
   //path and stableId were refactored (wrt spec) to avoid recursiveness and be more specific 
   def Path: Rule0 = rule { zeroOrMore(Id ~ '.') ~ "this" ~ zeroOrMore(Id).separatedBy('.') | StableId }
-  def StableId: Rule0 = rule { zeroOrMore(Id ~ '.') ~ optional(("this" | "super" ~ optional(ClassQualifier)) ~ oneOrMore(Id).separatedBy('.')) }
+  def StableId: Rule0 = rule {
+    zeroOrMore(Id ~ '.') ~ ("this" | "super" ~ optional(ClassQualifier)) ~ '.' ~ oneOrMore(Id).separatedBy('.') |
+    Id ~ zeroOrMore('.' ~ Id)
+  }
+//  def StableId: Rule0 = rule { zeroOrMore(Id ~ '.') ~ optional("this" | "super" ~ optional(ClassQualifier)) ~ oneOrMore(Id).separatedBy('.') }
   def ClassQualifier = rule { '[' ~ Id ~ ']' }
 
   ///////////////////////////////////////////
@@ -55,7 +68,13 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
   def InfixType = rule { CompoundType ~ zeroOrMore(Id ~ optional(Newline) ~ CompoundType) }
   def CompoundType = rule { oneOrMore(AnnotType).separatedBy("with") ~ optional(Refinement) }
   def AnnotType = rule { SimpleType ~ zeroOrMore(Annotation) }
-  def SimpleType: Rule0 = rule { '(' ~ Types ~ ')' | Path ~ '.' ~ "type" | StableId | SimpleType ~ '#' ~ Id | SimpleType ~ TypeArgs }
+  def SimpleType: Rule0 = rule {
+    '(' ~ Types ~ ')' |
+      Path ~ '.' ~ "type" |
+      StableId |
+      !ch(EOI) ~ SimpleType ~ '#' ~ Id |
+      !ch(EOI) ~ SimpleType ~ TypeArgs
+  }
   def TypeArgs = rule { '[' ~ Types ~ ']' }
   def Types = rule { oneOrMore(Type).separatedBy(',') }
   def Refinement = rule { optional(Newline) ~ '{' ~ oneOrMore(RefineStat).separatedBy(Semi) ~ '}' }
@@ -78,29 +97,29 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
       ForCFlow |
       "throw" ~ Expr |
       "return" ~ optional(Expr) |
-      optional(SimpleExpr ~ '.') ~ Id ~ '=' ~ Expr |
       SimpleExpr1 ~ ArgumentExprs ~ '=' ~ Expr |
-      PostfixExpr ~ Ascription |
-      PostfixExpr ~ "match" ~ '{' ~ CaseClauses ~ '}' |
-      PostfixExpr
+      optional(SimpleExpr ~ '.') ~ Id ~ '=' ~ Expr |
+      PostfixExpr ~ optional("match" ~ '{' ~ CaseClauses ~ '}' | Ascription)
   }
+  
   def IfCFlow = rule { "if" ~ '(' ~ Expr ~ ')' ~ zeroOrMore(Newline) ~ Expr ~ optional(optional(Semi) ~ "else" ~ Expr) }
   def WhileCFlow = rule { "while" ~ '(' ~ Expr ~ ')' ~ zeroOrMore(Newline) ~ Expr }
   def TryCFlow = rule { "try" ~ '{' ~ Block ~ '}' ~ optional("catch" ~ '{' ~ CaseClauses ~ '}') ~ optional("finally" ~ Expr) }
   def DoWhileCFlow = rule { "do" ~ Expr ~ optional(Semi) ~ "while" ~ '(' ~ Expr ~ ')' }
   def ForCFlow = rule { "for" ~ ('(' ~ Enumerators ~ ')' | '{' ~ Enumerators ~ '}') ~ zeroOrMore(Newline) ~ optional("yield") ~ Expr }
   def PostfixExpr: Rule0 = rule { InfixExpr ~ optional(Id ~ optional(Newline)) }
-  def InfixExpr: Rule0 = rule { PrefixExpr | InfixExpr ~ Id ~ optional(Newline) ~ InfixExpr }
+  def InfixExpr: Rule0 = rule { PrefixExpr ~ zeroOrMore(Id ~ optional(Newline) ~ PrefixExpr) }
   def PrefixExpr = rule { optional(anyOf("-+~!")) ~ SimpleExpr }
-  def SimpleExpr: Rule0 = rule { "new" ~ (ClassTemplate | TemplateBody) | BlockExpr | SimpleExpr1 ~ optional('_') }
+  def SimpleExpr: Rule0 = rule { SimpleExprNoLiteral | SimpleExpr1 ~ optional(ArgumentExprs) ~ optional('_') }
+  def SimpleExprNoLiteral: Rule0 = rule { "new" ~ (ClassTemplate | TemplateBody) | BlockExpr }
   def SimpleExpr1: Rule0 = rule {
+    //    run(println("SimpleExpr1 matching on " + pos)) ~
     Literal ~ drop[String] | //literal currently captures, so it can be used outside. but since all our rules lack AST, we drop its value in order to be able to compose them
       Path |
       '_' |
       '(' ~ optional(Exprs) ~ ')' |
-      SimpleExpr ~ '.' ~ Id |
-      SimpleExpr ~ TypeArgs |
-      SimpleExpr1 ~ ArgumentExprs /*| //this line doesn't make sense, if none of the previous options work, there is no way that a recursion on SimpleExpr1 will work
+      SimpleExprNoLiteral ~ '.' ~ Id |
+      SimpleExprNoLiteral ~ TypeArgs/*|
     XmlExpr*/
   }
   def Exprs: Rule0 = rule { oneOrMore(Expr) separatedBy ',' }
@@ -111,10 +130,10 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
   def BlockExpr: Rule0 = rule { '{' ~ (CaseClauses | Block) ~ '}' }
   def Block: Rule0 = rule { zeroOrMore(BlockStat ~ Semi) ~ optional(ResultExpr) }
   def BlockStat: Rule0 = rule {
-    Import |
+    &(Semi) ~ MATCH | //shortcircuit when Semi is found
+      Import |
       zeroOrMore(Annotation) ~ (optional("implicit" | "lazy") ~ Def | zeroOrMore(LocalModifier) ~ TmplDef) |
-      Expr1 |
-      MATCH
+      Expr1
   }
   def ResultExpr: Rule0 = rule { (Bindings | optional("implicit") ~ Id | "_") ~ "=>" ~ Block | Expr1 }
   def Enumerators: Rule0 = rule { Generator ~ zeroOrMore(Semi ~ Enumerator) }
@@ -123,10 +142,10 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
   def CaseClauses: Rule0 = rule { oneOrMore(CaseClause) }
   def CaseClause: Rule0 = rule { "case" ~ Pattern ~ optional(Guard) ~ "=>" ~ Block }
   def Guard: Rule0 = rule { "if" ~ PostfixExpr }
-  def Pattern: Rule0 = rule { oneOrMore(Pattern) separatedBy '|' }
+  def Pattern: Rule0 = rule { oneOrMore(Pattern1) separatedBy '|' }
   def Pattern1: Rule0 = rule { '_' ~ ':' ~ TypePat | VarId ~ ':' ~ TypePat | Pattern2 }
-  def Pattern2: Rule0 = rule { VarId ~ optional("@" ~ Pattern3) }
-  def Pattern3: Rule0 = rule { SimplePattern ~ zeroOrMore(Id ~ optional(Newline) ~ SimplePattern) | SimplePattern } // this pattern doesn't make sense to me...
+  def Pattern2: Rule0 = rule { VarId ~ optional("@" ~ Pattern3) | Pattern3 }
+  def Pattern3: Rule0 = rule { SimplePattern ~ zeroOrMore(Id ~ optional(Newline) ~ SimplePattern) } // this pattern doesn't make sense to me...
   def SimplePattern: Rule0 = rule {
     '_' |
       VarId |
@@ -173,9 +192,9 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
   def SelfType: Rule0 = rule { "this" ~ ':' ~ Type ~ "=>" | Id ~ optional(':' ~ Type) ~ "=>" }
 
   def Import: Rule0 = rule { "import" ~ oneOrMore(ImportExpr).separatedBy(',') }
-  
+
   //ImportExpr is slightly changed wrt spec because StableId always consumes all the Ids possible, so there is no need to one at the end
-  def ImportExpr: Rule0 = rule { StableId ~ optional('_' | ImportSelectors) }
+  def ImportExpr: Rule0 = rule { StableId ~ optional('.' ~ ('_' | ImportSelectors)) }
   def ImportSelectors: Rule0 = rule { '{' ~ zeroOrMore(ImportSelector ~ ',') ~ (ImportSelector | '_') ~ '}' }
   def ImportSelector: Rule0 = rule { Id ~ optional("=>" ~ (Id | '_')) }
 

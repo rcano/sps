@@ -5,32 +5,32 @@ import org.parboiled2._
 
 trait Literals extends StringLiterals { self: ScalaSyntax =>
 
-  def FloatingPointLiteral = rule { capture(
-    "." ~ oneOrMore(Digit) ~ optional(ExponentPart) ~ optional(FloatType) |
-    oneOrMore(Digit) ~ (
+  def FloatingPointLiteral = rule {
+    capture(
       "." ~ oneOrMore(Digit) ~ optional(ExponentPart) ~ optional(FloatType) |
-      ExponentPart ~ optional(FloatType) |
-      optional(ExponentPart) ~ FloatType
-    )
-    )
+        oneOrMore(Digit) ~ (
+          "." ~ oneOrMore(Digit) ~ optional(ExponentPart) ~ optional(FloatType) |
+          ExponentPart ~ optional(FloatType) |
+          optional(ExponentPart) ~ FloatType))
   }
 
   def IntegerLiteral = rule { capture((DecimalNumeral | HexNumeral) ~ optional(anyOf("Ll"))) }
 
   def BooleanLiteral = rule { capture("true" | "false") }
 
+  def MultilineComment: Rule0 = rule { "/*" ~ zeroOrMore(MultilineComment | !"*/" ~ ANY) ~ "*/" }
   def Comment: Rule0 = rule {
-    ("/*" ~ (Comment | zeroOrMore(!"*/")) ~ "*/") |
-    ("//" ~ zeroOrMore(!Newline) ~ Newline) }
-
+    MultilineComment |
+      "//" ~ zeroOrMore(!Newline ~ ANY) ~ (Newline | EOI)
+  }
 
   def Literal = rule {
     (capture(optional("-")) ~ (FloatingPointLiteral | IntegerLiteral) ~> ((sign: String, number) => sign + number)) |
-    BooleanLiteral |
-    CharacterLiteral |
-    StringLiteral |
-    SymbolLiteral |
-    capture("null")
+      BooleanLiteral |
+      CharacterLiteral |
+      StringLiteral |
+      SymbolLiteral |
+      capture("null")
   }
 }
 
@@ -48,7 +48,7 @@ private[syntax] trait StringLiterals { self: Literals with ScalaSyntax =>
   def MultiLineChars = rule { zeroOrMore(optional('"') ~ optional('"') ~ noneOf("\"")) }
   def StringLiteral = rule {
     ("\"\"\"" ~ capture(MultiLineChars) ~ capture("\"\"\"" ~ zeroOrMore('"')) ~> ((multilineChars: String, quotes) => multilineChars + quotes.dropRight(3))) |
-    ('"' ~ capture(zeroOrMore("\\\"" | noneOf("\n\""))) ~ '"')
+      ('"' ~ capture(zeroOrMore("\\\"" | noneOf("\n\""))) ~ '"')
   }
 
   def isPrintableChar(c: Char): Boolean = {
