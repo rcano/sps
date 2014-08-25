@@ -20,8 +20,8 @@ trait Basic { self: ScalaSyntax =>
   def Parentheses = rule { "(" | ")" | "[" | "]" | "{" | "}" }
   def DelimiterChar = rule { "'" | "\"" | "." | ";" | "," }
 
-  def WhitespaceChar = rule { "\u0020" | "\u0009" | "\u000D" | "\u000A" }
-  def Newline = rule { "\n" }
+  def WhitespaceChar = rule { "\u0020" | "\u0009" }
+  def Newline = rule { "\r\n" | "\n" }
   def Semi = rule { ';' | oneOrMore(Newline) }
   def OperatorChar = rule { anyOf("""!#$%&*+-/:<=>?@\^|~""") | CharPredicate.from(c => c.getType match { case Character.OTHER_SYMBOL | Character.MATH_SYMBOL => true; case _ => false}) }
   def Letter = rule { Upper | Lower | CharPredicate.from(c => c.isLetter | c.isDigit) }

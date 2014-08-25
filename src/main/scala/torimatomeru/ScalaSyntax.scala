@@ -20,7 +20,7 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
   }
 
   def pos = cursor -> cursorChar
-  
+
   /**
    * helper printing function
    */
@@ -50,9 +50,9 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
   def Path: Rule0 = rule { zeroOrMore(Id ~ '.') ~ "this" ~ zeroOrMore(Id).separatedBy('.') | StableId }
   def StableId: Rule0 = rule {
     zeroOrMore(Id ~ '.') ~ ("this" | "super" ~ optional(ClassQualifier)) ~ '.' ~ oneOrMore(Id).separatedBy('.') |
-    Id ~ zeroOrMore('.' ~ Id)
+      Id ~ zeroOrMore('.' ~ Id)
   }
-//  def StableId: Rule0 = rule { zeroOrMore(Id ~ '.') ~ optional("this" | "super" ~ optional(ClassQualifier)) ~ oneOrMore(Id).separatedBy('.') }
+  //  def StableId: Rule0 = rule { zeroOrMore(Id ~ '.') ~ optional("this" | "super" ~ optional(ClassQualifier)) ~ oneOrMore(Id).separatedBy('.') }
   def ClassQualifier = rule { '[' ~ Id ~ ']' }
 
   ///////////////////////////////////////////
@@ -101,7 +101,7 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
       optional(SimpleExpr ~ '.') ~ Id ~ '=' ~ Expr |
       PostfixExpr ~ optional("match" ~ '{' ~ CaseClauses ~ '}' | Ascription)
   }
-  
+
   def IfCFlow = rule { "if" ~ '(' ~ Expr ~ ')' ~ zeroOrMore(Newline) ~ Expr ~ optional(optional(Semi) ~ "else" ~ Expr) }
   def WhileCFlow = rule { "while" ~ '(' ~ Expr ~ ')' ~ zeroOrMore(Newline) ~ Expr }
   def TryCFlow = rule { "try" ~ '{' ~ Block ~ '}' ~ optional("catch" ~ '{' ~ CaseClauses ~ '}') ~ optional("finally" ~ Expr) }
@@ -119,7 +119,7 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
       '_' |
       '(' ~ optional(Exprs) ~ ')' |
       SimpleExprNoLiteral ~ '.' ~ Id |
-      SimpleExprNoLiteral ~ TypeArgs/*|
+      SimpleExprNoLiteral ~ TypeArgs /*|
     XmlExpr*/
   }
   def Exprs: Rule0 = rule { oneOrMore(Expr) separatedBy ',' }
@@ -148,10 +148,10 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
   def Pattern3: Rule0 = rule { SimplePattern ~ zeroOrMore(Id ~ optional(Newline) ~ SimplePattern) } // this pattern doesn't make sense to me...
   def SimplePattern: Rule0 = rule {
     '_' |
-      VarId |
       Literal ~ drop[String] | //literal currently captures, so it can be used outside. but since all our rules lack AST, we drop its value in order to be able to compose them
+      '(' ~ optional(Patterns) ~ ')' |
       StableId ~ '(' ~ (optional(Patterns ~ ',') ~ optional(VarId ~ '@') ~ '_' ~ '*' | optional(Patterns)) ~ ')' |
-      '(' ~ optional(Patterns) ~ ')' /*|
+      VarId /*|
     XmlPattern*/
   }
   def Patterns: Rule0 = rule { '_' ~ '*' | oneOrMore(Pattern).separatedBy(',') }

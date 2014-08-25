@@ -97,7 +97,7 @@ class SyntaxTest extends BaseTest {
       assert(s.cursor === s.input.length)
     }
     itShould("parse simple imports") {
-      val s = new ScalaSyntax(s"import a.b.c, d.e\n")
+      val s = new ScalaSyntax(s"import a.b.c, d.e ")
       val res = s.Import.run()
       res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
       assert(res.isSuccess)
@@ -153,12 +153,47 @@ class SyntaxTest extends BaseTest {
       assert(res.isSuccess)
       assert(s.cursor === s.input.length)
     }
+    itShould("parse simple case clauses") {
+    	val s = new ScalaSyntax(s"""case 2 => 1""")
+    	val res = s.CaseClause.run()
+    	res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
+    	assert(res.isSuccess)
+    	assert(s.cursor === s.input.length)
+    }
     itShould("parse case clauses") {
       val s = new ScalaSyntax(s"""case res@A(b: MyType, SomeB(d: Another, _, q@Query(a, c))) => 1""")
       val res = s.CaseClause.run()
       res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
       assert(res.isSuccess)
       assert(s.cursor === s.input.length)
+    }
+    itShould("parse simple case clauses with simple guards") {
+    	val s = new ScalaSyntax(s"""case 1 if someCond => 1""")
+    	val res = s.CaseClause.run()
+    	res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
+    	assert(res.isSuccess)
+    	assert(s.cursor === s.input.length)
+    }
+    itShould("parse simple case clauses with simple guards 2") {
+    	val s = new ScalaSyntax(s"""case 1 if 4 <= 5 => 1""")
+    	val res = s.CaseClause.run()
+    	res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
+    	assert(res.isSuccess)
+    	assert(s.cursor === s.input.length)
+    }
+    itShould("parse simple case clauses with simple guards 3") {
+    	val s = new ScalaSyntax(s"""case 1 if 4 == 5 => 1""")
+    	val res = s.CaseClause.run()
+    	res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
+    	assert(res.isSuccess)
+    	assert(s.cursor === s.input.length)
+    }
+    itShould("parse type patterns") {
+    	val s = new ScalaSyntax(s"""case a: Some => 1""")
+    	val res = s.CaseClause.run()
+    	res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
+    	assert(res.isSuccess)
+    	assert(s.cursor === s.input.length)
     }
     itShould("parse case clauses with guards") {
       val s = new ScalaSyntax(s"""case res@A(b: MyType, SomeB(d: Another, _, q@Query(a, c))) if (a == c || someBoolean) => 1""")

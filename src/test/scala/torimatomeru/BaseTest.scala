@@ -30,7 +30,7 @@ trait BaseTest extends FunSpec {
       catch {
         case e: StackOverflowError =>
           alert(s"Test '$name' failed with stack overflow")
-          throw e
+          fail(e)
       } finally {
         timer.cancel(true)
       }
