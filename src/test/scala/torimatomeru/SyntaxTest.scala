@@ -6,201 +6,80 @@ class SyntaxTest extends BaseTest {
 
   describe("ScalaSyntax") {
     itShould("parse paths and stableId") {
-      {
-        val s = new ScalaSyntax(s"""a.bc""")
-        val res = s.Path.run()
-        res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-        assert(res.isSuccess)
-        assert(s.cursor === s.input.length)
-      }
-      {
-        val s = new ScalaSyntax(s"""A.b.C""")
-        val res = s.Path.run()
-        res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-        assert(res.isSuccess)
-        assert(s.cursor === s.input.length)
-      }
-      {
-        val s = new ScalaSyntax(s"""a""")
-        val res = s.Path.run()
-        res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-        assert(res.isSuccess)
-        assert(s.cursor === s.input.length)
-      }
-      {
-        val s = new ScalaSyntax(s"""B""")
-        val res = s.Path.run()
-        res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-        assert(res.isSuccess)
-        assert(s.cursor === s.input.length)
-      }
-      {
-        val s = new ScalaSyntax(s"""this.B""")
-        val res = s.Path.run()
-        res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-        assert(res.isSuccess)
-        assert(s.cursor === s.input.length)
-      }
-      {
-        val s = new ScalaSyntax(s"""a.this.B""")
-        val res = s.Path.run()
-        res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-        assert(res.isSuccess)
-        assert(s.cursor === s.input.length)
-      }
+      ruleSucceeds(s"""a.bc""")(_.Path)
+      ruleSucceeds(s"""A.b.C""")(_.Path)
+      ruleSucceeds(s"""a""")(_.Path)
+      ruleSucceeds(s"""B""")(_.Path)
+      ruleSucceeds(s"""this.B""")(_.Path)
+      ruleSucceeds(s"""a.this.B""")(_.Path)
     }
+
     itShould("parse simple vals and vars") {
       for (d <- Seq("var", "val")) {
-        {
-          val s = new ScalaSyntax(s"""$d a = "some literal"""")
-          val res = s.PatVarDef.run()
-          res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-          assert(res.isSuccess)
-          assert(s.cursor === s.input.length)
-        }
-        {
-          val s = new ScalaSyntax(s"$d a = 12")
-          val res = s.PatVarDef.run()
-          res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-          assert(res.isSuccess)
-          assert(s.cursor === s.input.length)
-        }
-        {
-          val s = new ScalaSyntax(s"$d a = someVar")
-          val res = s.PatVarDef.run()
-          res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-          assert(res.isSuccess)
-          assert(s.cursor === s.input.length)
-        }
+        ruleSucceeds(s"""$d a = "some literal"""")(_.PatVarDef)
+        ruleSucceeds(s"""$d a = 12""")(_.PatVarDef)
+        ruleSucceeds(s"""$d a = someVar""")(_.PatVarDef)
       }
     }
+
     itShould("parse simple vals and vars assigned to blocks") {
       for (d <- Seq("var", "val")) {
-        val s = new ScalaSyntax(s"""$d a = {fakeId; 32}""")
-        val res = s.PatVarDef.run()
-        res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-        assert(res.isSuccess)
+        ruleSucceeds(s"""$d a = {fakeId; 32}""")(_.PatVarDef)
       }
     }
+    
     itShould("parse blocks") {
-      val s = new ScalaSyntax(s"val a = someVar; val b = 32; 12")
-      val res = s.Block.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"val a = someVar; val b = 32; 12")(_.Block)
     }
     itShould("accept comments where blanks are allowed") {
-      val s = new ScalaSyntax(s"""val a = someVar /*comment*/; val b = /*comment*/ 32;/*comment*/ 12 //lalal""")
-      val res = s.Block.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""val a = someVar /*comment*/; val b = /*comment*/ 32;/*comment*/ 12 //lalal""")(_.Block)
     }
+    
     itShould("parse simple imports") {
-      val s = new ScalaSyntax(s"import a.b.c, d.e ")
-      val res = s.Import.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"import a.b.c, d.e ")(_.Import)
     }
     itShould("parse import all") {
-      val s = new ScalaSyntax(s"""import a.b.c._;""")
-      val res = s.Block.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""import a.b.c._;""")(_.Block)
     }
     itShould("parse selecting imports") {
-      val s = new ScalaSyntax(s"""import a.b.c.{d,e};""")
-      val res = s.Block.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""import a.b.c.{d,e};""")(_.Block)
     }
     itShould("parse selecting imports with aliases") {
-      val s = new ScalaSyntax(s"""import a.b.c.{d,e => f};""")
-      val res = s.Block.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""import a.b.c.{d,e => f};""")(_.Block)
     }
 
     itShould("parse patterns with variables") {
-      val s = new ScalaSyntax(s"""a @ _""")
-      val res = s.Pattern2.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""a @ _""")(_.Pattern2)
     }
     itShould("parse patterns with deconstructors") {
-      val s = new ScalaSyntax(s"""A(b, C(1,"hi"), 2)""")
-      val res = s.Pattern.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""A(b, C(1,"hi"), 2)""")(_.Pattern)
     }
     itShould("parse patterns with types") {
-      val s = new ScalaSyntax(s"""A(b: MyType)""")
-      val res = s.Pattern.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""A(b: MyType)""")(_.Pattern)
     }
     itShould("parse very complicated patterns") {
-      val s = new ScalaSyntax(s"""res@A(b: MyType, SomeB(d: Another, _, q@Query(a, c)))""")
-      val res = s.Pattern.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""res@A(b: MyType, SomeB(d: Another, _, q@Query(a, c)))""")(_.Pattern)
     }
     itShould("parse simple case clauses") {
-    	val s = new ScalaSyntax(s"""case 2 => 1""")
-    	val res = s.CaseClause.run()
-    	res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-    	assert(res.isSuccess)
-    	assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""case 2 => 1""")(_.CaseClause)
     }
     itShould("parse case clauses") {
-      val s = new ScalaSyntax(s"""case res@A(b: MyType, SomeB(d: Another, _, q@Query(a, c))) => 1""")
-      val res = s.CaseClause.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""case res@A(b: MyType, SomeB(d: Another, _, q@Query(a, c))) => 1""")(_.CaseClause)
     }
     itShould("parse simple case clauses with simple guards") {
-    	val s = new ScalaSyntax(s"""case 1 if someCond => 1""")
-    	val res = s.CaseClause.run()
-    	res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-    	assert(res.isSuccess)
-    	assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""case 1 if someCond => 1""")(_.CaseClause)
     }
     itShould("parse simple case clauses with simple guards 2") {
-    	val s = new ScalaSyntax(s"""case 1 if 4 <= 5 => 1""")
-    	val res = s.CaseClause.run()
-    	res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-    	assert(res.isSuccess)
-    	assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""case 1 if 4 <= 5 => 1""")(_.CaseClause)
     }
     itShould("parse simple case clauses with simple guards 3") {
-    	val s = new ScalaSyntax(s"""case 1 if 4 == 5 => 1""")
-    	val res = s.CaseClause.run()
-    	res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-    	assert(res.isSuccess)
-    	assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""case 1 if 4 == 5 => 1""")(_.CaseClause)
     }
     itShould("parse type patterns") {
-    	val s = new ScalaSyntax(s"""case a: Some => 1""")
-    	val res = s.CaseClause.run()
-    	res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-    	assert(res.isSuccess)
-    	assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""case a: Some => 1""")(_.CaseClause)
     }
     itShould("parse case clauses with guards") {
-      val s = new ScalaSyntax(s"""case res@A(b: MyType, SomeB(d: Another, _, q@Query(a, c))) if (a == c || someBoolean) => 1""")
-      val res = s.CaseClause.run()
-      res.recover { case e: ParseError => println(s.formatError(e) + "\n" + e.formatTraces) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""case res@A(b: MyType, SomeB(d: Another, _, q@Query(a, c))) if (a == c || someBoolean) => 1""")(_.CaseClause)
     }
   }
 }

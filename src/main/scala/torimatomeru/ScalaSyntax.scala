@@ -69,11 +69,12 @@ class ScalaSyntax(val input: ParserInput) extends Parser with Basic with Identif
   def CompoundType = rule { oneOrMore(AnnotType).separatedBy("with") ~ optional(Refinement) }
   def AnnotType = rule { SimpleType ~ zeroOrMore(Annotation) }
   def SimpleType: Rule0 = rule {
+    BasicType ~ optional('#' ~ Id) ~ optional(TypeArgs)
+  }
+  def BasicType: Rule0 = rule {
     '(' ~ Types ~ ')' |
       Path ~ '.' ~ "type" |
-      StableId |
-      !ch(EOI) ~ SimpleType ~ '#' ~ Id |
-      !ch(EOI) ~ SimpleType ~ TypeArgs
+      StableId
   }
   def TypeArgs = rule { '[' ~ Types ~ ']' }
   def Types = rule { oneOrMore(Type).separatedBy(',') }
