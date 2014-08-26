@@ -76,7 +76,8 @@ class SyntaxTest extends BaseTest {
       ruleSucceeds(s"""case 1 if 4 == 5 => 1""")(_.CaseClause)
     }
     itShould("parse type patterns") {
-      ruleSucceeds(s"""case a: Some => 1""")(_.CaseClause)
+    	ruleSucceeds(s"""case a: Some => 1""")(_.CaseClause)
+      ruleSucceeds(s"""case ex: Throwable => e.printStackTrace()""")(_.CaseClause)
     }
     itShould("parse case clauses with guards") {
       ruleSucceeds(s"""case res@A(b: MyType, SomeB(d: Another, _, q@Query(a, c))) if (a == c || someBoolean) => 1""")(_.CaseClause)

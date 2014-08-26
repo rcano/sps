@@ -6,36 +6,20 @@ class CommentsSyntaxTest extends BaseTest {
 
   describe("Comments rules") {
     itShould("match simple comments") {
-      val s = new ScalaSyntax(s"""//someComment here, even with another // in it""")
-      val res = s.Comment.run()
-      res.recover { case e: ParseError => println(s.formatError(e)) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s"""//someComment here, even with another // in it""")(_.Comment)
     }
     itShould("match multiline comments") {
-      val s = new ScalaSyntax(s"""/*
+      ruleSucceeds(s"""/*
 here is another comment
-*/""")
-      val res = s.Comment.run()
-      res.recover { case e: ParseError => println(s.formatError(e)) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+*/""")(_.Comment)
     }
     itShould("match nested multiline comments") {
-      val s = new ScalaSyntax(s"""/*
+      ruleSucceeds(s"""/*
 here is another /*comment*/ /*and/*a/*very/*nested/*one*/*/*/*/*/
-*/""")
-      val res = s.Comment.run()
-      res.recover { case e: ParseError => println(s.formatError(e)) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+*/""")(_.Comment)
     }
     itShould("match comments right after a Semi") {
-      val s = new ScalaSyntax(s""";/*some comment*/""")
-      val res = s.Semi.run()
-      res.recover { case e: ParseError => println(s.formatError(e)) }
-      assert(res.isSuccess)
-      assert(s.cursor === s.input.length)
+      ruleSucceeds(s""";/*some comment*/""")(_.Semi)
     }
   }
 }
